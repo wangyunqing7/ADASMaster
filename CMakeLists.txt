@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Qml Sql Test)
+find_package(Qt6 REQUIRED COMPONENTS Quick Qml Sql Test Network)
 
 # Qt >= 6.10（qt_standard_project_setup 要求），项目使用现代 QML 模块系统
 qt_standard_project_setup(REQUIRES 6.10)
@@ -87,7 +87,7 @@ add_library(adasmaster_core STATIC
 )
 
 target_include_directories(adasmaster_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(adasmaster_core PUBLIC Qt6::Core Qt6::Sql)
+target_link_libraries(adasmaster_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network)
 
 qt_add_executable(ADASMaster
     main.cpp

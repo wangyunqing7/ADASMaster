@@ -21,6 +21,9 @@ public:
 
     void setDatabaseManager(DatabaseManager *database) { m_database = database; }
     void setStateManager(StateManager *state) { m_state = state; }
+    // 注入当前操作员（由 AppController 在登录时设置，修复审计链断裂）
+    void setOperatorName(const QString &name) { m_operatorName = name; }
+    QString operatorName() const { return m_operatorName; }
 
     bool active() const { return m_active; }
     QString currentRunId() const { return m_runId; }
@@ -45,6 +48,7 @@ private:
     QList<SampleRecord> m_buffer;
     QString m_runId;
     QString m_lastError;
+    QString m_operatorName = QStringLiteral("default");  // 默认值，登录后覆盖
     bool m_active = false;
     bool m_failureReported = false;
     static constexpr int BufferSize = 10;

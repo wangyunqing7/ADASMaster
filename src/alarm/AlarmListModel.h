@@ -48,6 +48,8 @@ public:
     void acknowledgeAll();                   // 确认全部
     const EventLog &eventAt(int row) const;
     int  count() const;
+    // 落盘后回填数据库 ID（异步落盘：先 append 再设 id），row 为模型行号
+    void setEventDatabaseId(int row, qint64 databaseId);
 
     // 清空内存列表（不触碰数据库历史），供"清空"按钮调用
     Q_INVOKABLE void clear();

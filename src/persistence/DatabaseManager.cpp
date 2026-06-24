@@ -201,7 +201,9 @@ bool DatabaseManager::finishRun(const QString &runId, const QString &status,
     query.addBindValue(resultText);
     query.addBindValue(finishedAtMs);
     query.addBindValue(runId);
-    if (!query.exec() || query.numRowsAffected() != 1) return setError(query.lastError().text());
+    // 瞬时错误（run 不存在、约束冲突）不锁死整条写链路，仅记录。
+    // numRowsAffected()==0 表示 runId 不存在——属正常情况（如已 finish），不视为错误。
+    if (!query.exec()) return transientError(query.lastError().text());
     clearError();
     return true;
 }
@@ -219,7 +221,8 @@ qint64 DatabaseManager::insertEvent(const QString &runId, qint64 timestampMs, in
     query.addBindValue(title);
     query.addBindValue(message);
     if (!query.exec()) {
-        setError(query.lastError().text());
+        // 单条事件插入失败不应影响后续事件，只记录瞬时错误
+        transientError(query.lastError().text());
         return -1;
     }
     clearError();
@@ -231,7 +234,7 @@ bool DatabaseManager::acknowledgeEvent(qint64 eventId)
     QSqlQuery query(database());
     query.prepare(QStringLiteral("UPDATE events SET acknowledged=1 WHERE id=?"));
     query.addBindValue(eventId);
-    if (!query.exec() || query.numRowsAffected() != 1) return setError(query.lastError().text());
+    if (!query.exec()) return transientError(query.lastError().text());
     clearError();
     return true;
 }
@@ -344,7 +347,16 @@ bool DatabaseManager::eventAcknowledged(qint64 eventId) const
 bool DatabaseManager::setError(const QString &message)
 {
     m_lastError = message.isEmpty() ? QStringLiteral("SQLite operation failed") : message;
-    m_writable = false;
+    m_writable = false;   // 致命错误：锁定写链路，需排查恢复
+    emit databaseChanged();
+    return false;
+}
+
+bool DatabaseManager::transientError(const QString &message)
+{
+    // 瞬时错误（约束冲突、单行不存在、临时锁定）只记录最近错误，
+    // 不改变 writable 状态——一次失败不应让整条写链路永久哑火。
+    m_lastError = message.isEmpty() ? QStringLiteral("SQLite operation failed") : message;
     emit databaseChanged();
     return false;
 }

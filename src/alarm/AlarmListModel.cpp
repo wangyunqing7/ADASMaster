@@ -123,6 +123,12 @@ const EventLog &AlarmListModel::eventAt(int row) const
     return row >= 0 && row < m_events.size() ? m_events.at(row) : invalid;
 }
 
+void AlarmListModel::setEventDatabaseId(int row, qint64 databaseId)
+{
+    if (row < 0 || row >= m_events.size()) return;
+    m_events[row].databaseId = databaseId;
+}
+
 void AlarmListModel::clear()
 {
     if (m_events.isEmpty()) {

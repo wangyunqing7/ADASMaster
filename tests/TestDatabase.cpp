@@ -148,6 +148,61 @@ private slots:
         QCOMPARE(samples.at(0).timestampMs, 100);
         QCOMPARE(samples.at(1).timestampMs, 200);
     }
+
+    // 回归保护：瞬时错误（finishRun 不存在的 runId）不得锁死写链路。
+    // 这是商业级持久化的核心保障——一次良性失败不应让告警/采样永久停止落盘。
+    void transientErrorDoesNotLockWritable()
+    {
+        QTemporaryDir directory;
+        DatabaseManager database;
+        QVERIFY(database.open(directory.filePath(QStringLiteral("transient.db"))));
+        QVERIFY(database.writable());
+
+        // finishRun 一个不存在的 runId：UPDATE 影响 0 行但执行成功。
+        // 旧实现会因 numRowsAffected!=1 调 setError 锁死；修复后视为幂等成功。
+        QVERIFY(database.finishRun(QStringLiteral("nonexistent-run"),
+                                   QStringLiteral("FINISHED"), QString(), 1000));
+        // 关键：即使有瞬时错误记录，writable 不应被置 false
+        QVERIFY2(database.writable(),
+                 "瞬时错误不应锁死写链路（C3 修复回归保护）");
+
+        // 验证仍能正常创建 run
+        TestRunRecord run;
+        run.id = QStringLiteral("after-transient");
+        run.scenarioName = QStringLiteral("AEB CCRs 50");
+        run.scenarioType = QStringLiteral("AEB");
+        run.startedAtMs = 5000;
+        run.status = QStringLiteral("RUNNING");
+        run.operatorName = QStringLiteral("tester");
+        run.appVersion = QStringLiteral("test");
+        run.configSnapshot = QStringLiteral("{}");
+        QVERIFY2(database.createRun(run), qPrintable(database.lastError()));
+    }
+
+    // 回归保护：insertEvent 失败不应锁死，后续事件仍可插入
+    void eventInsertFailureIsTransient()
+    {
+        QTemporaryDir directory;
+        DatabaseManager database;
+        QVERIFY(database.open(directory.filePath(QStringLiteral("evt.db"))));
+
+        TestRunRecord run;
+        run.id = QStringLiteral("evt-run");
+        run.scenarioName = QStringLiteral("AEB CCRs 50");
+        run.scenarioType = QStringLiteral("AEB");
+        run.startedAtMs = 1;
+        run.status = QStringLiteral("RUNNING");
+        run.operatorName = QStringLiteral("tester");
+        run.appVersion = QStringLiteral("test");
+        run.configSnapshot = QStringLiteral("{}");
+        QVERIFY(database.createRun(run));
+
+        // 正常插入事件后 writable 必须仍为 true
+        const qint64 id = database.insertEvent(run.id, 100, 1, 4,
+                                               QStringLiteral("测试"), QStringLiteral("内容"));
+        QVERIFY(id > 0);
+        QVERIFY2(database.writable(), "正常事件插入后 writable 必须保持 true");
+    }
 };
 
 QTEST_GUILESS_MAIN(TestDatabase)

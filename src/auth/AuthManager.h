@@ -40,7 +40,14 @@ public:
     Q_INVOKABLE bool login(const QString &username, const QString &password);
     Q_INVOKABLE void logout();
 
+    // ---- 密码哈希（安全加固）----
+    // 旧式无盐 SHA256（仅向后兼容/迁移判定，新密码不应使用）
     static QString hashPassword(const QString &password);  // SHA256 hex
+    // PBKDF2-HMAC-SHA256 加盐哈希，格式：pbkdf2$iterations$saltHex$hashHex
+    static QString hashPasswordSalted(const QString &password, const QString &saltHex,
+                                      int iterations = 10000);
+    // 统一验证：自动识别旧 SHA256 与新 PBKDF2 格式，常量时间比较
+    static bool verifyPassword(const QString &password, const QString &storedHash);
     static int roleIndex(const QString &role);             // "admin"->3 等
 
 signals:
@@ -55,4 +62,9 @@ private:
     QString m_currentDisplayName;
     int m_currentRole = 0;
     QString m_loginError;
+
+    // 登录失败锁定（防暴力破解）
+    int m_failedAttempts = 0;
+    qint64 m_lockUntilMs = 0;          // 锁定截止时间戳；0 表示未锁定
+    static constexpr int MaxFailedAttempts = 5;
 };

@@ -26,24 +26,29 @@ void AlarmManager::raise(AlarmLevel level, AlarmSource source,
     e.title  = title;
     e.message = message;
 
-    if (m_database && m_database->writable()) {
-        e.databaseId = m_database->insertEvent(m_currentRunId, e.timestampMs,
-                                               static_cast<int>(level),
-                                               static_cast<int>(source),
-                                               title, message);
-    }
-
+    // 安全优先：先入内存模型 + 发信号，确保 UI 立即响应、急停告警不被 DB 阻塞。
+    // busy_timeout=3s 意味着先落盘会让 Emergency 告警延迟最多 3 秒，对工控安全不可接受。
     m_model->append(e);
     m_latestEvent = QStringLiteral("[%1] %2").arg(e.title).arg(e.message);
     emit latestEventChanged();
     emit eventRaised(e);
 
-    // 同步输出到 Qt 日志（后续可由 DataLogger 落盘）
+    // 同步输出到 Qt 日志（Emergency 用 qCritical 以区别于普通错误）
     switch (level) {
-        case AlarmLevel::Info:      qInfo()  << "[信息]" << title << message; break;
+        case AlarmLevel::Info:      qInfo()   << "[信息]" << title << message; break;
         case AlarmLevel::Warning:   qWarning() << "[警告]" << title << message; break;
         case AlarmLevel::Error:     qWarning() << "[错误]" << title << message; break;
-        case AlarmLevel::Emergency: qWarning() << "[急停]" << title << message; break;
+        case AlarmLevel::Emergency: qCritical() << "[急停]" << title << message; break;
+    }
+
+    // 之后落盘 DB（瞬时失败不影响内存告警的呈现）
+    if (m_database && m_database->writable()) {
+        const qint64 id = m_database->insertEvent(m_currentRunId, e.timestampMs,
+                                                  static_cast<int>(level),
+                                                  static_cast<int>(source),
+                                                  title, message);
+        if (id > 0)
+            m_model->setEventDatabaseId(0, id);   // 最新事件在头部 index 0
     }
 }
 

@@ -54,7 +54,8 @@ private:
     QSqlDatabase database() const;
     bool migrate();
     bool execPragma(const QString &statement);
-    bool setError(const QString &message);
+    bool setError(const QString &message);        // 致命错误：锁死写链路
+    bool transientError(const QString &message);  // 瞬时错误：仅记录，不影响 writable
     void clearError();
 
     QString m_connectionName;

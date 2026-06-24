@@ -131,6 +131,14 @@ AppController::AppController(const QString &dataRoot,
 
     m_auth->setAlarmManager(m_alarm);
 
+    // 审计链：登录状态变化时把当前操作员注入数据记录器，修复 operatorName 硬编码
+    m_logger->setOperatorName(m_auth->isLoggedIn() ? m_auth->currentUser()
+                                                   : QStringLiteral("default"));
+    connect(m_auth, &AuthManager::loginStateChanged, this, [this]() {
+        m_logger->setOperatorName(m_auth->isLoggedIn() ? m_auth->currentUser()
+                                                       : QStringLiteral("default"));
+    });
+
     m_scenario->setDeviceManager(m_device);
     m_scenario->setSafetyManager(m_safety);
     m_scenario->setStateManager(m_state);
