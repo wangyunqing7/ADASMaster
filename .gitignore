@@ -1,0 +1,56 @@
+# ===== 构建产物 =====
+# 构建目录（含 .exe / .obj / ninja 缓存等）
+build/
+# CMake 生成文件
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+compile_commands.json
+# Ninja 缓存
+.ninja_deps
+.ninja_log
+# 项目可执行文件（根目录意外生成的）
+*.exe
+*.out
+*.app
+
+# ===== Qt 生成文件 =====
+*.qmlc
+*.qmltc
+*.jsc
+qrc_*.cpp
+moc_*.cpp
+moc_*.h
+ui_*.h
+*.qrc.depends
+
+# ===== 运行时数据（程序运行时生成，不入库）=====
+# 数据库与运行时存储根目录数据
+data/adasmaster.sqlite
+data/adasmaster.sqlite-*
+data/scenario_catalog.json
+# 运行时日志
+logs/
+
+# ===== 工具/IDE 内部目录 =====
+# superpowers 运行时缓存（brainstorm session、pid 等）
+.superpowers/
+
+# ===== IDE / 编辑器 =====
+.vscode/
+.idea/
+*.user
+*.user.*
+CMakeUserPrefs.json
+*.swp
+*~
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== 临时/备份 =====
+*.bak
+*.tmp
+*.orig

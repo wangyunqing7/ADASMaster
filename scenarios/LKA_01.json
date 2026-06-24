@@ -1,0 +1,27 @@
+{
+    "name": "LKA 01",
+    "type": "LKA",
+    "group": "LKA",
+    "subgroup": "LaneDeparture",
+    "description": "车道保持辅助，偏离车道线时纠偏",
+    "ego": {
+        "target_speed_mps": 20.0,
+        "start_x": 0.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0
+    },
+    "target": {
+        "type": "车道线",
+        "speed_mps": 0.0,
+        "note": "无物理目标，以车道线曲率变化为输入"
+    },
+    "trigger_condition": "车道线曲率变化 或 车辆接近车道边界",
+    "stop_condition": "车辆回正 或 偏离出界",
+    "safety_boundary_m": 80.0,
+    "max_test_time_sec": 30.0,
+    "pass_criteria": {
+        "no_departure": true,
+        "max_lateral_deviation_m": 0.3
+    },
+    "repeat_count": 2
+}

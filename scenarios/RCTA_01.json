@@ -1,0 +1,36 @@
+{
+    "name": "RCTA 01",
+    "type": "RCTA",
+    "group": "RCTA",
+    "subgroup": "Reverse",
+    "description": "倒车横向穿越场景，后向碰撞预警与制动",
+    "ego": {
+        "target_speed_mps": -2.0,
+        "start_x": 0.0,
+        "start_y": 0.0,
+        "start_yaw": 270.0
+    },
+    "target": {
+        "type": "横穿车辆",
+        "speed_mps": 3.0,
+        "start_x": -10.0,
+        "start_y": 5.0,
+        "start_yaw": 0.0,
+        "waypoints": [
+            { "x": -10.0, "y": 5.0, "speed": 3.0 },
+            { "x": -5.0, "y": 2.5, "speed": 3.0 },
+            { "x": 0.0, "y": 0.0, "speed": 3.0 },
+            { "x": 5.0, "y": -2.5, "speed": 3.0 },
+            { "x": 10.0, "y": -5.0, "speed": 3.0 }
+        ]
+    },
+    "trigger_condition": "后向雷达探测到横穿目标",
+    "stop_condition": "碰撞风险解除 或 超时",
+    "safety_boundary_m": 40.0,
+    "max_test_time_sec": 15.0,
+    "pass_criteria": {
+        "max_ttc_sec": 1.5,
+        "no_collision": true
+    },
+    "repeat_count": 2
+}

@@ -1,0 +1,55 @@
+{
+    "//说明": "设备配置。第一阶段使用 FakeDevice 模拟；后续在此配置真实设备地址/协议。",
+    "devices": [
+        {
+            "name": "驾驶机器人 #1",
+            "type": "DrivingRobot",
+            "ip": "192.168.1.10",
+            "port": 5000,
+            "protocol": "tcp",
+            "enabled": true,
+            "required": true,
+            "motion_telemetry": true
+        },
+        {
+            "name": "目标车平台 #1",
+            "type": "TargetPlatform",
+            "ip": "192.168.1.11",
+            "port": 5001,
+            "protocol": "udp",
+            "enabled": true,
+            "required": true,
+            "motion_telemetry": true
+        },
+        {
+            "name": "RTK 基站",
+            "type": "RtkBase",
+            "ip": "192.168.1.20",
+            "port": 5010,
+            "protocol": "ntrip",
+            "enabled": true,
+            "required": true,
+            "motion_telemetry": false
+        },
+        {
+            "name": "安全系统",
+            "type": "SafetySystem",
+            "ip": "192.168.1.30",
+            "port": 5020,
+            "protocol": "tcp",
+            "enabled": true,
+            "required": true,
+            "motion_telemetry": false
+        },
+        {
+            "name": "数据采集设备",
+            "type": "DataAcquisition",
+            "ip": "192.168.1.40",
+            "port": 5030,
+            "protocol": "tcp",
+            "enabled": true,
+            "required": true,
+            "motion_telemetry": false
+        }
+    ]
+}
