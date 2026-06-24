@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ADASMaster 是 ADAS（高级驾驶辅助系统）场地测试主控系统的工控上位机，统一调度驾驶机器人 / 目标车 / RTK / 安全系统，执行 NCAP/ADAS 测试工况。
 
-技术栈：**C++17 + Qt6 (Quick/Qml) + 手写 QML + CMake + Ninja**。当前为**第一阶段**：全部使用 `FakeDevice` 模拟设备，工况参数硬编码在 `ScenarioEngine::loadScenario` 中（`scenarios/*.json` 尚未被解析，注释里写的 `ScenarioParser` 是后续工作）。
+技术栈：**C++17 + Qt6 (Quick/Qml) + 手写 QML + CMake + Ninja**。当前为**第二阶段**：仍全部使用 `FakeDevice` 模拟设备，但工况参数已由 `ScenarioParser` 从 `scenarios/*.json` 加载，并由 `NcapEvaluator` 按 C-NCAP 2024 / Euro NCAP 规程评定 PASS/FAIL。
 
 ## 构建与运行
 
@@ -25,7 +25,18 @@ cmake -B build -G Ninja -DCMAKE_PREFIX_PATH=C:/Qt/6.11.1/mingw_64 -DCMAKE_BUILD_
 
 > `CMakeLists.txt` 中 `WIN32_EXECUTABLE TRUE` 使程序无控制台窗口。调试时若要看 `qWarning` 输出，临时改为 `FALSE` 重新构建。
 
-本项目**没有**单元测试框架或 lint 配置——不要编造测试/检查命令。
+本项目使用 **QtTest** 单元测试框架 + **qmllint** 静态检查门禁：
+
+```bash
+# 构建并运行全部测试（ctest）
+export PATH="/c/Qt/6.11.1/mingw_64/bin:/c/Qt/Tools/mingw1310_64/bin:$PATH"
+cmake --build build
+cd build && ctest --output-on-failure
+# 注：含 GUI 的 *_gate 测试需要桌面环境，CI/无头环境用 -E 排除
+cd build && ctest --output-on-failure -E "login_gate|startup_smoke|scenario_management_gate|status_monitor_gate"
+```
+
+> 运行单个 .exe 测试需 Qt DLL 在 PATH，工作目录需在源码根（测试用相对路径 `scenarios/...`）。
 
 ## 核心架构
 

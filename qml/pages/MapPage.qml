@@ -17,6 +17,9 @@ Item {
     // appController 由 main.cpp setContextProperty 注入，静态分析工具无法识别其类型，故此处行内抑制
     readonly property var ctrl: appController // qmllint disable unqualified
     readonly property var stm: page.ctrl.stateManager
+    // NCAP 裁决颜色：0=通过绿 1=未通过红 2=待评定灰
+    readonly property color verdictColor: page.stm.verdictCode === 0 ? Theme.colorNormal
+            : (page.stm.verdictCode === 1 ? Theme.colorEmergency : Theme.colorTextDim)
     // 地图视图参数：可由鼠标滚轮缩放、拖拽平移
     property real pixelsPerMeter: 4.0     // 缩放（1m 对应像素数）
     property real viewPanX: 0.0           // 视图水平偏移（像素，正值右移）
@@ -359,6 +362,65 @@ Item {
 
                     // 弹性占位
                     Item { Layout.fillHeight: true; Layout.fillWidth: true }
+
+                    // ---- NCAP 评估结果卡（测试结束时显现）----
+                    // verdictCode: 0=通过 1=未通过 2=待评定
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 88
+                        visible: page.stm.verdictText.length > 0
+                        radius: Theme.radius
+                        // 颜色：通过绿、未通过红、待评定灰
+                        color: Qt.rgba(page.verdictColor.r, page.verdictColor.g, page.verdictColor.b, 0.12)
+                        border.color: page.verdictColor
+                        border.width: 2
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: Theme.spacingSm
+                            spacing: 2
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.spacingSm
+                                // 裁决徽标
+                                Rectangle {
+                                    Layout.preferredWidth: 56
+                                    Layout.preferredHeight: 22
+                                    radius: 11
+                                    color: page.verdictColor
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: page.stm.verdictText
+                                        color: "white"
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: Theme.fontTiny
+                                        font.bold: true
+                                    }
+                                }
+                                // 评分
+                                Text {
+                                    text: "评分 %1%".arg(page.stm.scorePercent.toFixed(0))
+                                    color: page.verdictColor
+                                    font.family: Theme.fontNumeric
+                                    font.pixelSize: Theme.fontMedium
+                                    font.bold: true
+                                    Layout.fillWidth: true
+                                }
+                            }
+                            // 详情
+                            Text {
+                                Layout.fillWidth: true
+                                text: page.stm.verdictDetail
+                                color: Theme.colorTextMuted
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontTiny
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
                 }
             }
         }
