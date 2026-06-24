@@ -40,28 +40,44 @@ Canvas {
         const w2sX = (wx) => cx + wx * ppm;
         const w2sY = (wy) => cy - wy * ppm;
 
-        // 背景网格（5m 间距）
-        ctx.strokeStyle = Theme.colorDivider; ctx.lineWidth = 1;
+        // ---- 第 0 层：背景网格（降低存在感，避免与轨迹混淆）----
+        // 网格颜色更淡 + 透明度，让轨迹线成为视觉焦点
         const gridPx = 5 * ppm;
         if (gridPx > 4) {
+            ctx.strokeStyle = Theme.colorDivider; ctx.lineWidth = 1; ctx.globalAlpha = 0.35;
             for (let gx = cx % gridPx; gx < canvas.width; gx += gridPx) {
                 ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
             }
             for (let gy = cy % gridPx; gy < canvas.height; gy += gridPx) {
                 ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
             }
+            ctx.globalAlpha = 1.0;
         }
-        // 坐标轴
-        ctx.strokeStyle = Theme.colorBorder; ctx.lineWidth = 1;
+        // 坐标轴（淡，仅作参照）
+        ctx.strokeStyle = Theme.colorBorder; ctx.lineWidth = 1; ctx.globalAlpha = 0.6;
         ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height); ctx.stroke();
+        ctx.globalAlpha = 1.0;
 
         if (canvas.mode === "path") {
-            // 先画非活动路径（虚线淡显），再画活动路径（实线高亮）
-            drawPath(ctx, canvas.targetWaypoints, w2sX, w2sY,
-                     Theme.colorWarning, canvas.activeTarget === "target");
-            drawPath(ctx, canvas.egoWaypoints, w2sX, w2sY,
-                     Theme.colorAccent, canvas.activeTarget === "ego");
+            // ---- 第 1 层：非活动路径（灰色低透明度，作为参照背景）----
+            // 先画非活动的那条，让活动路径叠在上层更突出
+            if (canvas.activeTarget !== "target")
+                drawPath(ctx, canvas.targetWaypoints, w2sX, w2sY,
+                         Theme.colorWarning, false);
+            if (canvas.activeTarget !== "ego")
+                drawPath(ctx, canvas.egoWaypoints, w2sX, w2sY,
+                         Theme.colorAccent, false);
+
+            // ---- 第 2 层：活动路径（高亮 + 光晕，视觉焦点）----
+            // 活动路径先画一圈半透明粗光晕（halo），再画实线，让它在网格上跳出来
+            if (canvas.activeTarget === "target")
+                drawPath(ctx, canvas.targetWaypoints, w2sX, w2sY,
+                         Theme.colorWarning, true);
+            if (canvas.activeTarget === "ego")
+                drawPath(ctx, canvas.egoWaypoints, w2sX, w2sY,
+                         Theme.colorAccent, true);
+
             drawLegend(ctx);
         } else {
             // replay 模式：播放采样轨迹
@@ -93,26 +109,44 @@ Canvas {
         }
     }
 
-    // 绘制单条路径：连线 + 圆点 + 序号（活动路径高亮）
+    // 绘制单条路径。isActive=true 时画半透明光晕底 + 高亮实线 + 序号；
+    // isActive=false 时画淡灰色参照线（透明度低，避免与活动路径争抢注意力）。
     function drawPath(ctx, pts, w2sX, w2sY, color, isActive) {
         if (!pts || pts.length === 0) return;
         if (pts.length >= 2) {
-            ctx.strokeStyle = color;
-            ctx.lineWidth = isActive ? 2.5 : 1.5;
-            if (!isActive) ctx.setLineDash([6, 4]);
+            if (isActive) {
+                // 活动路径：先画光晕（半透明粗线），再画清晰实线
+                ctx.strokeStyle = color; ctx.lineWidth = 7; ctx.globalAlpha = 0.18;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(w2sX(pts[0].x), w2sY(pts[0].y));
+                for (let i = 1; i < pts.length; ++i) ctx.lineTo(w2sX(pts[i].x), w2sY(pts[i].y));
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+                ctx.lineWidth = 2.5;
+            } else {
+                // 非活动参照：虚线 + 低透明度
+                ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.4;
+                ctx.setLineDash([6, 4]);
+            }
             ctx.beginPath();
             ctx.moveTo(w2sX(pts[0].x), w2sY(pts[0].y));
             for (let i = 1; i < pts.length; ++i) ctx.lineTo(w2sX(pts[i].x), w2sY(pts[i].y));
             ctx.stroke();
             ctx.setLineDash([]);
+            ctx.globalAlpha = 1.0;
         }
+        // 航点圆点
         ctx.fillStyle = color;
+        ctx.globalAlpha = isActive ? 1.0 : 0.5;
         for (let i = 0; i < pts.length; ++i) {
             const r = isActive ? 6 : 4;
             ctx.beginPath(); ctx.arc(w2sX(pts[i].x), w2sY(pts[i].y), r, 0, 2 * Math.PI); ctx.fill();
         }
+        ctx.globalAlpha = 1.0;
         if (isActive) {
-            ctx.fillStyle = Theme.colorText; ctx.font = "10px monospace";
+            // 起终点标注 + 序号（仅活动路径，避免文字泛滥）
+            ctx.fillStyle = Theme.colorText; ctx.font = "bold 10px monospace";
             for (let i = 0; i < pts.length; ++i) {
                 ctx.fillText(String(i + 1), w2sX(pts[i].x) + 8, w2sY(pts[i].y) - 8);
             }
