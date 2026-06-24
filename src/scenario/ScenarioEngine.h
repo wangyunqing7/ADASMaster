@@ -19,6 +19,7 @@
 #include <QTimer>
 #include "ScenarioStatus.h"
 #include "ScenarioConfig.h"
+#include "../ncap/TestResult.h"
 
 class DeviceManager;
 class SafetyManager;
@@ -105,4 +106,9 @@ private:
     double m_tgtX = 0, m_tgtY = 0, m_tgtYaw = 0, m_tgtSpeed = 0;
     bool   m_simInited = false;
     int    m_currentWaypoint = -1;     // 当前正在前往的航点索引；-1 表示单点模式
+
+    // NCAP 评估跟踪（运行中累积，结束时交 NcapEvaluator 评定）
+    TestResult m_result;
+    bool   m_collisionDetected = false;     // 本轮是否已检测到碰撞（避免重复触发）
+    double m_aebDecelMps2 = 0.0;            // AEB 触发后的制动减速度（>0 表示已触发）
 };

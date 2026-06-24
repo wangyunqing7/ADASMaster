@@ -1,0 +1,32 @@
+{
+    "name": "FCW CCRs 75",
+    "type": "FCW",
+    "group": "FCW",
+    "subgroup": "CCRs",
+    "description": "前向碰撞预警——静止车。主车 75km/h，验证 FCW 在 TTC≤2.6s 预警。Euro NCAP / C-NCAP 2024 FCW 测试。",
+    "ego": {
+        "target_speed_mps": 20.83,
+        "start_x": -100.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0
+    },
+    "target": {
+        "type": "静止车辆",
+        "speed_mps": 0.0,
+        "start_x": 0.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0,
+        "waypoints": [
+            { "x": 0.0, "y": 0.0, "speed": 0.0 }
+        ]
+    },
+    "trigger_condition": "主车进入 FCW 预警判定区（TTC≤4s）",
+    "stop_condition": "FCW 预警触发 或 主车停止 或 碰撞",
+    "safety_boundary_m": 120.0,
+    "max_test_time_sec": 10.0,
+    "pass_criteria": {
+        "max_ttc_sec": 2.6,
+        "no_collision": false
+    },
+    "repeat_count": 2
+}

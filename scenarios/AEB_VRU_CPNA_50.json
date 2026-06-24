@@ -1,0 +1,33 @@
+{
+    "name": "AEB VRU CPNA 50",
+    "type": "AEB",
+    "group": "AEB VRU",
+    "subgroup": "CPNA",
+    "description": "弱势道路使用者自动紧急制动——成人近端横穿。主车 50km/h，成人 6.5km/h 横穿。C-NCAP 2024 附录O / Euro NCAP VRU。",
+    "ego": {
+        "target_speed_mps": 13.89,
+        "start_x": -60.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0
+    },
+    "target": {
+        "type": "成人目标物",
+        "speed_mps": 1.81,
+        "start_x": 4.0,
+        "start_y": -6.0,
+        "start_yaw": 90.0,
+        "waypoints": [
+            { "x": 4.0, "y": -6.0, "speed": 1.81 },
+            { "x": 4.0, "y": 6.0, "speed": 1.81 }
+        ]
+    },
+    "trigger_condition": "主车距行人碰撞点 TTC≤4s",
+    "stop_condition": "主车完全停止 或 通过 或 碰撞",
+    "safety_boundary_m": 70.0,
+    "max_test_time_sec": 12.0,
+    "pass_criteria": {
+        "max_ttc_sec": 0.0,
+        "no_collision": true
+    },
+    "repeat_count": 3
+}

@@ -31,6 +31,10 @@ add_library(adasmaster_core STATIC
     src/config/ConfigManager.h
     src/config/ConfigManager.cpp
 
+    src/ncap/TestResult.h
+    src/ncap/NcapEvaluator.h
+    src/ncap/NcapEvaluator.cpp
+
     src/persistence/PersistenceTypes.h
     src/persistence/DatabaseManager.h
     src/persistence/DatabaseManager.cpp
@@ -127,6 +131,13 @@ qt_add_qml_module(ADASMaster
         config/devices.json
         config/users.json
         scenarios/AEB_CCR_50.json
+        scenarios/AEB_CCRs_30.json
+        scenarios/AEB_CCRs_40.json
+        scenarios/AEB_CCRm_50.json
+        scenarios/AEB_CCRb_50.json
+        scenarios/AEB_VRU_CPNA_50.json
+        scenarios/AEB_VRU_CBNA_50.json
+        scenarios/FCW_CCRs_75.json
         scenarios/RCTA_01.json
         scenarios/LKA_01.json
         qml/icons/dashboard.svg
@@ -183,6 +194,7 @@ add_adasmaster_test(test_scenario_parser tests/TestScenarioParser.cpp)
 add_adasmaster_test(test_waypoint_simulation tests/TestWaypointSimulation.cpp)
 add_adasmaster_test(test_scenario_catalog tests/TestScenarioCatalog.cpp)
 add_adasmaster_test(test_trajectory_geometry tests/TestTrajectoryGeometry.cpp)
+add_adasmaster_test(test_ncap_evaluator tests/TestNcapEvaluator.cpp)
 
 add_test(NAME qml_lint_gate
     COMMAND powershell -NoProfile -ExecutionPolicy Bypass

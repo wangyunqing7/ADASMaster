@@ -1,0 +1,32 @@
+{
+    "name": "AEB CCRs 30",
+    "type": "AEB",
+    "group": "AEB",
+    "subgroup": "CCRs",
+    "description": "车对静止车自动紧急制动，主车 30km/h 正碰。C-NCAP 2024 附录L / Euro NCAP AEB C2C v4.3。",
+    "ego": {
+        "target_speed_mps": 8.33,
+        "start_x": -50.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0
+    },
+    "target": {
+        "type": "静止车辆",
+        "speed_mps": 0.0,
+        "start_x": 0.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0,
+        "waypoints": [
+            { "x": 0.0, "y": 0.0, "speed": 0.0 }
+        ]
+    },
+    "trigger_condition": "主车进入触发区域（距目标 40m）",
+    "stop_condition": "主车完全停止 或 通过目标位置",
+    "safety_boundary_m": 60.0,
+    "max_test_time_sec": 15.0,
+    "pass_criteria": {
+        "max_ttc_sec": 0.0,
+        "no_collision": true
+    },
+    "repeat_count": 3
+}

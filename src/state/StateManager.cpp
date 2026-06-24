@@ -47,3 +47,12 @@ void StateManager::setTarget(double x, double y, double yaw, double speed, const
 { m_tgtX = x; m_tgtY = y; m_tgtYaw = yaw; m_tgtSpeed = speed; m_targetType = type; emit stateChanged(); }
 void StateManager::setRelative(double distance, double relSpeed, double ttc, bool risk)
 { m_distance = distance; m_relativeSpeed = relSpeed; m_ttc = ttc; m_collisionRisk = risk; emit stateChanged(); }
+
+void StateManager::setVerdict(const QString &text, int code, double score, const QString &detail)
+{
+    m_verdictText = text;
+    m_verdictCode = code;
+    m_scorePercent = score;
+    m_verdictDetail = detail;
+    emit stateChanged();
+}

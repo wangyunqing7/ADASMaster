@@ -8,6 +8,7 @@
 #include "../state/StateManager.h"
 #include "../alarm/AlarmManager.h"
 #include "../persistence/DataLogger.h"
+#include "../ncap/NcapEvaluator.h"
 
 #include <QDateTime>
 #include <QCoreApplication>
@@ -208,6 +209,13 @@ void ScenarioEngine::onSafetyEmergency(const QString &source)
     m_tickTimer.stop();
     if (m_devices) m_devices->emergencyStopAll();
     setState(TestState::Emergency);
+    // 急停 = 异常中断，NCAP 裁决为未通过（completedNormally=false）
+    m_result.completedNormally = false;
+    const NcapVerdict verdict = NcapEvaluator::evaluate(m_config, m_result);
+    if (m_state)
+        m_state->setVerdict(verdict.outcomeText(),
+                            static_cast<int>(verdict.verdict),
+                            verdict.scorePercent, verdict.detail);
     if (m_alarm)
         m_alarm->emergency(QStringLiteral("急停触发"),
                            QStringLiteral("来源：%1，所有测试流程已停止").arg(source));
@@ -276,8 +284,18 @@ void ScenarioEngine::beginSimulation()
         m_currentWaypoint = -1;
     }
     m_simInited = true;
+
+    // 重置 NCAP 评估跟踪状态
+    m_collisionDetected = false;
+    m_aebDecelMps2 = 0.0;
+    m_result = TestResult{};
+    m_result.egoTargetSpeed = m_config.egoTargetSpeed;
+    m_result.minTtcSec = 999.0;
+    m_result.minDistanceM = 999.0;
+
     if (m_state) {
         m_state->setTarget(m_tgtX, m_tgtY, m_tgtYaw, m_tgtSpeed, m_config.targetType);
+        m_state->setVerdict(QString(), 2, 0.0, QString());   // 清空上轮裁决
     }
 }
 
@@ -285,12 +303,17 @@ void ScenarioEngine::stepSimulation(double dt)
 {
     if (!m_simInited) return;
 
-    // 主车加速至目标速度
-    const double accel = 3.0; // m/s^2
-    if (m_config.egoTargetSpeed >= 0.0)
+    // 主车加速至目标速度；若 AEB 已触发则改为制动减速
+    const double accel = 3.0; // m/s^2 正常加速
+    const bool isAeb = m_config.type.compare(QStringLiteral("AEB"), Qt::CaseInsensitive) == 0;
+    if (m_aebDecelMps2 > 0.0) {
+        // AEB 制动中：速度递减，最低到 0
+        m_egoSpeed = std::max(0.0, m_egoSpeed - m_aebDecelMps2 * dt);
+    } else if (m_config.egoTargetSpeed >= 0.0) {
         m_egoSpeed = std::min(m_config.egoTargetSpeed, m_egoSpeed + accel * dt);
-    else
+    } else {
         m_egoSpeed = std::max(m_config.egoTargetSpeed, m_egoSpeed - accel * dt);
+    }
     const double egoRadians = m_egoYaw * 3.14159265358979323846 / 180.0;
     m_egoX += m_egoSpeed * std::cos(egoRadians) * dt;
     m_egoY += m_egoSpeed * std::sin(egoRadians) * dt;
@@ -327,19 +350,42 @@ void ScenarioEngine::stepSimulation(double dt)
     }
     // m_currentWaypoint >= size()：已走完所有航点，目标物静止不动
 
-    // 计算相对距离/TTC（沿 X 轴简化）
+    // ---- NCAP 精确指标计算（替代旧的简化 dist<5 判定）----
     const double dx = m_tgtX - m_egoX;
-    const double dist = std::hypot(dx, m_tgtY - m_egoY);
-    const double relSpeed = m_egoSpeed - m_tgtSpeed;
-    const double ttc = (relSpeed > 0.1) ? (std::max(0.0, dx) / relSpeed) : 999.0;
+    const double dy = m_tgtY - m_egoY;
+    const double dist = std::hypot(dx, dy);
+    // 纵向距离（沿行驶方向 X 轴投影，取主车前方为正）
+    const double longitudinal = m_tgtX - m_egoX;
+    const double ttc = NcapEvaluator::computeTtc(longitudinal, m_egoSpeed, m_tgtSpeed);
+    m_result.minDistanceM = std::min(m_result.minDistanceM, dist);
+    if (ttc < m_result.minTtcSec)
+        m_result.minTtcSec = ttc;
+
+    // 碰撞检测（NCAP 几何重叠判定）
+    const ActorPose egoPose{m_egoX, m_egoY, m_egoYaw};
+    const ActorPose tgtPose{m_tgtX, m_tgtY, m_tgtYaw};
+    const bool collision = NcapEvaluator::detectsCollision(egoPose, 2.25, tgtPose, 1.8, 1.8);
+
+    // AEB 触发：接近中且 TTC 低于阈值时启动制动（模拟被测车辆的 AEB 响应）
+    if (isAeb && m_aebDecelMps2 == 0.0 && ttc < 2.6 && ttc > 0.0 &&
+        std::isfinite(ttc) && m_egoSpeed > m_tgtSpeed) {
+        m_aebDecelMps2 = 6.0;   // 典型 AEB 制动减速度 ~0.6g
+        m_result.aebTriggerSpeedMps = m_egoSpeed;
+    }
+
+    if (collision && !m_collisionDetected) {
+        m_collisionDetected = true;
+        m_result.collisionOccurred = true;
+        m_result.speedAtImpactMps = m_egoSpeed;
+    }
+
     const bool isLka = m_config.type.compare(QStringLiteral("LKA"), Qt::CaseInsensitive) == 0;
-    const bool isRcta = m_config.type.compare(QStringLiteral("RCTA"), Qt::CaseInsensitive) == 0;
-    const bool risk = !isLka && dist < (isRcta ? 3.0 : 5.0);
+    const bool risk = !isLka && (collision || (ttc < 1.0 && std::isfinite(ttc)));
 
     if (m_state) {
         m_state->setEgo(m_egoX, m_egoY, m_egoYaw, m_egoSpeed);
         m_state->setTarget(m_tgtX, m_tgtY, m_tgtYaw, m_tgtSpeed, m_config.targetType);
-        m_state->setRelative(dist, relSpeed, ttc, risk);
+        m_state->setRelative(dist, m_egoSpeed - m_tgtSpeed, ttc, risk);
     }
 
     if (m_logger && m_logger->active() &&
@@ -350,15 +396,20 @@ void ScenarioEngine::stepSimulation(double dt)
 
     // 进度 = 已用时间 / 最大测试时间
     const double elapsed = (QDateTime::currentMSecsSinceEpoch() - m_runStartMs) / 1000.0;
+    m_result.durationSec = elapsed;
     if (m_state) m_state->setProgress(std::min(1.0, elapsed / m_config.maxTestTimeSec));
 
-    // 自动完成条件：发生碰撞风险或超时
-    if (risk) {
+    // 自动完成条件：碰撞、主车完全刹停、或超时
+    if (m_collisionDetected) {
         m_tickTimer.stop();
-        finishTest(QStringLiteral("%1 风险触发（模拟）").arg(m_config.type));
+        finishTest(QStringLiteral("碰撞触发：%1 工况").arg(m_config.type));
+    } else if (isAeb && m_aebDecelMps2 > 0.0 && m_egoSpeed < 0.1) {
+        // AEB 成功刹停，避免碰撞
+        m_tickTimer.stop();
+        finishTest(QStringLiteral("AEB 成功刹停：%1 工况").arg(m_config.type));
     } else if (elapsed >= m_config.maxTestTimeSec) {
         m_tickTimer.stop();
-        finishTest(QStringLiteral("%1 模拟测试完成").arg(m_config.type));
+        finishTest(QStringLiteral("%1 测试完成").arg(m_config.type));
     }
 }
 
@@ -367,14 +418,30 @@ void ScenarioEngine::finishTest(const QString &result)
     cancelCountdown();
     m_tickTimer.stop();
     if (m_devices) m_devices->stopAll();
+
+    // 正常结束（停止/超时/刹停/碰撞触发）→ 调用 NCAP 评估器给出裁决
+    m_result.completedNormally = true;
+    const NcapVerdict verdict = NcapEvaluator::evaluate(m_config, m_result);
+    const QString fullResult = QStringLiteral("[%1 评分%2%] %2")
+        .arg(verdict.outcomeText())
+        .arg(verdict.scorePercent, 0, 'f', 0)
+        .arg(result);
+
     if (m_state) {
-        m_state->setResult(result);
+        m_state->setResult(fullResult);
         m_state->setProgress(1.0);
+        m_state->setVerdict(verdict.outcomeText(),
+                            static_cast<int>(verdict.verdict),
+                            verdict.scorePercent, verdict.detail);
     }
-    if (m_alarm)
-        m_alarm->info(QStringLiteral("测试完成"), result);
+    if (m_alarm) {
+        const QString level = verdict.verdict == NcapOutcome::Pass
+            ? QStringLiteral("通过") : QStringLiteral("未通过");
+        m_alarm->info(QStringLiteral("测试完成（%1）").arg(level),
+                      QStringLiteral("%1 · %2").arg(fullResult, verdict.detail));
+    }
     if (m_logger && m_logger->active() &&
-        !m_logger->finishRun(QStringLiteral("FINISHED"), result)) {
+        !m_logger->finishRun(QStringLiteral("FINISHED"), fullResult)) {
         handlePersistenceFailure(m_logger->lastError());
         return;
     }

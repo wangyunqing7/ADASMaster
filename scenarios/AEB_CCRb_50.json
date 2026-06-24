@@ -1,0 +1,34 @@
+{
+    "name": "AEB CCRb 50",
+    "type": "AEB",
+    "group": "AEB",
+    "subgroup": "CCRb",
+    "description": "前车制动自动紧急制动。前车先 50km/h 匀速，主车跟随；前车以 4m/s² 减速。Euro NCAP AEB C2C v4.3 CCRb。",
+    "ego": {
+        "target_speed_mps": 13.89,
+        "start_x": -30.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0
+    },
+    "target": {
+        "type": "制动车辆",
+        "speed_mps": 13.89,
+        "start_x": 0.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0,
+        "waypoints": [
+            { "x": 0.0, "y": 0.0, "speed": 13.89 },
+            { "x": 30.0, "y": 0.0, "speed": 4.0 },
+            { "x": 35.0, "y": 0.0, "speed": 0.0 }
+        ]
+    },
+    "trigger_condition": "前车开始减速（主车距前车 30m）",
+    "stop_condition": "主车完全停止 或 碰撞 或 前车停止",
+    "safety_boundary_m": 80.0,
+    "max_test_time_sec": 12.0,
+    "pass_criteria": {
+        "max_ttc_sec": 0.0,
+        "no_collision": true
+    },
+    "repeat_count": 3
+}

@@ -48,6 +48,11 @@ class StateManager : public QObject
     Q_PROPERTY(double relativeSpeed READ relativeSpeed NOTIFY stateChanged)
     Q_PROPERTY(double ttc          READ ttc          NOTIFY stateChanged)
     Q_PROPERTY(bool   collisionRisk READ collisionRisk NOTIFY stateChanged)
+    // ---- NCAP 评估结果（运行结束给出 PASS/FAIL + 评分）----
+    Q_PROPERTY(QString verdictText  READ verdictText  NOTIFY stateChanged)
+    Q_PROPERTY(int     verdictCode  READ verdictCode  NOTIFY stateChanged)
+    Q_PROPERTY(double  scorePercent READ scorePercent NOTIFY stateChanged)
+    Q_PROPERTY(QString verdictDetail READ verdictDetail NOTIFY stateChanged)
 
 public:
     explicit StateManager(QObject *parent = nullptr);
@@ -78,6 +83,11 @@ public:
     double relativeSpeed() const { return m_relativeSpeed; }
     double ttc() const { return m_ttc; }
     bool collisionRisk() const { return m_collisionRisk; }
+    // NCAP 评估结果
+    QString verdictText() const { return m_verdictText; }
+    int verdictCode() const { return m_verdictCode; }       // 0=Pass 1=Fail 2=Pending
+    double scorePercent() const { return m_scorePercent; }
+    QString verdictDetail() const { return m_verdictDetail; }
 
     // 写接口（由 ScenarioEngine / SafetyManager / AppController 调用）
     void setSafetyLevel(SafetyLevel l);
@@ -90,6 +100,8 @@ public:
     void setEgo(double x, double y, double yaw, double speed);
     void setTarget(double x, double y, double yaw, double speed, const QString &type);
     void setRelative(double distance, double relSpeed, double ttc, bool risk);
+    // 设置 NCAP 评估结果（由 ScenarioEngine 在测试结束时调用）
+    void setVerdict(const QString &text, int code, double score, const QString &detail);
 
 signals:
     void stateChanged();
@@ -116,4 +128,10 @@ private:
     double m_relativeSpeed = 0;
     double m_ttc = 999.0;
     bool   m_collisionRisk = false;
+
+    // NCAP 评估结果
+    QString m_verdictText;
+    int     m_verdictCode = 2;       // Pending（未评定）
+    double  m_scorePercent = 0.0;
+    QString m_verdictDetail;
 };

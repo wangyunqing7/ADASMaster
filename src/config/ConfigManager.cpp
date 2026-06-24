@@ -135,9 +135,23 @@ bool ConfigManager::loadScenarios(const QString &directory, QString *error)
     QDir dir(directory);
     QStringList files = dir.entryList({QStringLiteral("*.json")}, QDir::Files, QDir::Name);
     if (files.isEmpty() && directory.startsWith(QLatin1Char(':'))) {
-        files = {QStringLiteral("AEB_CCR_50.json"),
-                 QStringLiteral("LKA_01.json"),
-                 QStringLiteral("RCTA_01.json")};
+        // qrc 内嵌工况的回退清单（与 CMakeLists RESOURCES 保持同步）
+        files = {
+            // AEB 车对车纵向
+            QStringLiteral("AEB_CCR_50.json"),
+            QStringLiteral("AEB_CCRs_30.json"),
+            QStringLiteral("AEB_CCRs_40.json"),
+            QStringLiteral("AEB_CCRm_50.json"),
+            QStringLiteral("AEB_CCRb_50.json"),
+            // AEB VRU 弱势道路使用者
+            QStringLiteral("AEB_VRU_CPNA_50.json"),
+            QStringLiteral("AEB_VRU_CBNA_50.json"),
+            // FCW 前向碰撞预警
+            QStringLiteral("FCW_CCRs_75.json"),
+            // LKA 车道保持 / RCTA 后向横穿
+            QStringLiteral("LKA_01.json"),
+            QStringLiteral("RCTA_01.json"),
+        };
     }
     if (files.isEmpty()) {
         fail(QStringLiteral("No scenario JSON files found in %1").arg(directory), error);

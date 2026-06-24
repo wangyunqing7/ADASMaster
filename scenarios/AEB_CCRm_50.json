@@ -1,0 +1,33 @@
+{
+    "name": "AEB CCRm 50",
+    "type": "AEB",
+    "group": "AEB",
+    "subgroup": "CCRm",
+    "description": "车对慢行车自动紧急制动。目标车 20km/h 匀速，主车 50km/h 接近。C-NCAP 2024 / Euro NCAP AEB C2C v4.3。",
+    "ego": {
+        "target_speed_mps": 13.89,
+        "start_x": -80.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0
+    },
+    "target": {
+        "type": "运动车辆",
+        "speed_mps": 5.56,
+        "start_x": -10.0,
+        "start_y": 0.0,
+        "start_yaw": 0.0,
+        "waypoints": [
+            { "x": -10.0, "y": 0.0, "speed": 5.56 },
+            { "x": 50.0, "y": 0.0, "speed": 5.56 }
+        ]
+    },
+    "trigger_condition": "主车接近目标至 TTC≤3s",
+    "stop_condition": "主车减速至与目标同速 或 碰撞",
+    "safety_boundary_m": 100.0,
+    "max_test_time_sec": 15.0,
+    "pass_criteria": {
+        "max_ttc_sec": 0.0,
+        "no_collision": true
+    },
+    "repeat_count": 3
+}

@@ -32,11 +32,17 @@ private slots:
 
         QVERIFY2(manager.load(&error), qPrintable(error));
         QCOMPARE(manager.devices().size(), 5);
-        QCOMPARE(manager.scenarios().size(), 3);
+        // 工况库已扩充为完整 NCAP 场景矩阵（AEB CCRs/CCRm/CCRb/VRU、FCW、LKA、RCTA）
+        QCOMPARE(manager.scenarios().size(), 10);
         QVERIFY(std::all_of(manager.devices().cbegin(), manager.devices().cend(),
                             [](const DeviceConfig &device) { return device.required; }));
         QVERIFY(manager.scenarioByName(QStringLiteral("RCTA 01")) != nullptr);
         QVERIFY(manager.scenarioByName(QStringLiteral("LKA 01")) != nullptr);
+        // 新增 NCAP 工况覆盖验证
+        QVERIFY(manager.scenarioByName(QStringLiteral("AEB CCRm 50")) != nullptr);
+        QVERIFY(manager.scenarioByName(QStringLiteral("AEB CCRb 50")) != nullptr);
+        QVERIFY(manager.scenarioByName(QStringLiteral("AEB VRU CPNA 50")) != nullptr);
+        QVERIFY(manager.scenarioByName(QStringLiteral("FCW CCRs 75")) != nullptr);
         QCOMPARE(std::count_if(manager.devices().cbegin(), manager.devices().cend(),
                                [](const DeviceConfig &device) { return device.motionTelemetry; }),
                  2);
