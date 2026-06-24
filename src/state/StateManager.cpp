@@ -56,3 +56,34 @@ void StateManager::setVerdict(const QString &text, int code, double score, const
     m_verdictDetail = detail;
     emit stateChanged();
 }
+
+void StateManager::appendTrail(double egoX, double egoY, double tgtX, double tgtY)
+{
+    // 追加位姿历史；达到上限时丢弃最旧的点（环形滚动，避免无限增长）
+    QVariantMap egoPt;
+    egoPt[QStringLiteral("x")] = egoX;
+    egoPt[QStringLiteral("y")] = egoY;
+    m_egoTrail.append(egoPt);
+    QVariantMap tgtPt;
+    tgtPt[QStringLiteral("x")] = tgtX;
+    tgtPt[QStringLiteral("y")] = tgtY;
+    m_targetTrail.append(tgtPt);
+    // 超过上限：移除最旧点（QVariantList removeFirst 是 O(n)，但 2000 点可接受）
+    if (m_egoTrail.size() > MaxTrailPoints) {
+        m_egoTrail.removeFirst();
+        m_targetTrail.removeFirst();
+    }
+}
+
+void StateManager::setTargetWaypoints(const QVariantList &waypoints)
+{
+    m_targetWaypoints = waypoints;
+    emit stateChanged();
+}
+
+void StateManager::clearTrail()
+{
+    m_egoTrail.clear();
+    m_targetTrail.clear();
+    emit stateChanged();
+}

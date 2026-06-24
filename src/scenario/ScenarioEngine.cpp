@@ -296,6 +296,16 @@ void ScenarioEngine::beginSimulation()
     if (m_state) {
         m_state->setTarget(m_tgtX, m_tgtY, m_tgtYaw, m_tgtSpeed, m_config.targetType);
         m_state->setVerdict(QString(), 2, 0.0, QString());   // 清空上轮裁决
+        // 清空上一轮轨迹历史，并把当前工况的目标物预设航点传给地图（"应该如何走"）
+        m_state->clearTrail();
+        QVariantList waypoints;
+        for (const Waypoint &wp : m_config.targetPath) {
+            QVariantMap pt;
+            pt[QStringLiteral("x")] = wp.x;
+            pt[QStringLiteral("y")] = wp.y;
+            waypoints.append(pt);
+        }
+        m_state->setTargetWaypoints(waypoints);
     }
 }
 
@@ -386,6 +396,8 @@ void ScenarioEngine::stepSimulation(double dt)
         m_state->setEgo(m_egoX, m_egoY, m_egoYaw, m_egoSpeed);
         m_state->setTarget(m_tgtX, m_tgtY, m_tgtYaw, m_tgtSpeed, m_config.targetType);
         m_state->setRelative(dist, m_egoSpeed - m_tgtSpeed, ttc, risk);
+        // 累积本帧位姿到轨迹历史（供实时地图绘制运动轨迹）
+        m_state->appendTrail(m_egoX, m_egoY, m_tgtX, m_tgtY);
     }
 
     if (m_logger && m_logger->active() &&

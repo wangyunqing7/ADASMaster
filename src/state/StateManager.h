@@ -11,6 +11,7 @@
 // =============================================================================
 
 #include <QObject>
+#include <QVariantList>
 #include "../safety/SafetyStatus.h"
 #include "../scenario/ScenarioStatus.h"
 
@@ -48,6 +49,13 @@ class StateManager : public QObject
     Q_PROPERTY(double relativeSpeed READ relativeSpeed NOTIFY stateChanged)
     Q_PROPERTY(double ttc          READ ttc          NOTIFY stateChanged)
     Q_PROPERTY(bool   collisionRisk READ collisionRisk NOTIFY stateChanged)
+
+    // ---- 轨迹可视化（实时地图绘制）----
+    // egoTrail/targetTrail：运行中累积的主车/目标物位姿历史 [{x,y}, ...]
+    // targetWaypoints：当前工况的目标物预设航点（"应该如何走"），[{x,y}, ...]
+    Q_PROPERTY(QVariantList egoTrail        READ egoTrail        NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList targetTrail     READ targetTrail     NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList targetWaypoints READ targetWaypoints NOTIFY stateChanged)
     // ---- NCAP 评估结果（运行结束给出 PASS/FAIL + 评分）----
     Q_PROPERTY(QString verdictText  READ verdictText  NOTIFY stateChanged)
     Q_PROPERTY(int     verdictCode  READ verdictCode  NOTIFY stateChanged)
@@ -83,6 +91,10 @@ public:
     double relativeSpeed() const { return m_relativeSpeed; }
     double ttc() const { return m_ttc; }
     bool collisionRisk() const { return m_collisionRisk; }
+    // 轨迹可视化
+    QVariantList egoTrail() const { return m_egoTrail; }
+    QVariantList targetTrail() const { return m_targetTrail; }
+    QVariantList targetWaypoints() const { return m_targetWaypoints; }
     // NCAP 评估结果
     QString verdictText() const { return m_verdictText; }
     int verdictCode() const { return m_verdictCode; }       // 0=Pass 1=Fail 2=Pending
@@ -100,6 +112,12 @@ public:
     void setEgo(double x, double y, double yaw, double speed);
     void setTarget(double x, double y, double yaw, double speed, const QString &type);
     void setRelative(double distance, double relSpeed, double ttc, bool risk);
+    // 追加一帧位姿到主车/目标物轨迹历史（带最大长度上限，超出丢弃最旧）
+    void appendTrail(double egoX, double egoY, double tgtX, double tgtY);
+    // 设置当前工况的目标物预设航点（"应该如何走"）
+    void setTargetWaypoints(const QVariantList &waypoints);
+    // 清空轨迹历史（新测试开始时）
+    void clearTrail();
     // 设置 NCAP 评估结果（由 ScenarioEngine 在测试结束时调用）
     void setVerdict(const QString &text, int code, double score, const QString &detail);
 
@@ -128,6 +146,12 @@ private:
     double m_relativeSpeed = 0;
     double m_ttc = 999.0;
     bool   m_collisionRisk = false;
+
+    // 轨迹可视化
+    QVariantList m_egoTrail;           // 主车位姿历史 [{x,y}, ...]
+    QVariantList m_targetTrail;        // 目标物位姿历史
+    QVariantList m_targetWaypoints;    // 当前工况目标物预设航点
+    static constexpr int MaxTrailPoints = 2000;  // 轨迹最大点数（防内存爆）
 
     // NCAP 评估结果
     QString m_verdictText;

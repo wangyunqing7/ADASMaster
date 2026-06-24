@@ -173,13 +173,14 @@ Item {
                         const ppm = page.pixelsPerMeter;
                         const W = mapCanvas.width;
                         const H = mapCanvas.height;
+                        const wx = (mx) => page.w2sX(mx, W);
+                        const wy = (my) => page.w2sY(my, H);
 
-                        // 背景网格（跟随平移与缩放）：网格间距 5m
+                        // ---- 第 0 层：背景网格（跟随平移与缩放），间距 5m ----
                         const gridM = 5;
                         const gridPx = gridM * ppm;
-                        if (gridPx > 4) {   // 缩太小则不画网格
+                        if (gridPx > 4) {
                             ctx.strokeStyle = Theme.colorDivider; ctx.lineWidth = 1;
-                            // 原点(0,0)在屏幕上的位置
                             const ox = page.w2sX(0, W);
                             const oy = page.w2sY(0, H);
                             for (let gx = ox % gridPx; gx < W; gx += gridPx) {
@@ -203,17 +204,52 @@ Item {
                         ctx.fillStyle = Theme.colorNormal; ctx.globalAlpha = 0.25;
                         ctx.beginPath(); ctx.arc(page.w2sX(-50, W), page.w2sY(0, H), 16, 0, 2 * Math.PI); ctx.fill();
                         ctx.globalAlpha = 1.0;
-                        // 主车
+
+                        // ---- 第 1 层：工况预设航点路径（"应该如何走"，淡色虚线 + 空心圆点）----
+                        // 这层让操作员看清工况定义的目标物运动规划
+                        const wps = page.stm.targetWaypoints;
+                        if (wps && wps.length >= 2) {
+                            ctx.strokeStyle = Theme.colorWarning; ctx.lineWidth = 1.5;
+                            ctx.setLineDash([4, 4]); ctx.globalAlpha = 0.5;
+                            ctx.beginPath();
+                            ctx.moveTo(wx(wps[0].x), wy(wps[0].y));
+                            for (let i = 1; i < wps.length; ++i) ctx.lineTo(wx(wps[i].x), wy(wps[i].y));
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                            // 航点空心圆
+                            ctx.globalAlpha = 0.7;
+                            for (let i = 0; i < wps.length; ++i) {
+                                ctx.strokeStyle = Theme.colorWarning; ctx.lineWidth = 1.5;
+                                ctx.beginPath(); ctx.arc(wx(wps[i].x), wy(wps[i].y), 4, 0, 2 * Math.PI); ctx.stroke();
+                            }
+                            ctx.globalAlpha = 1.0;
+                        }
+
+                        // ---- 第 2 层：运行累积轨迹历史（"实际怎么走的"，实线）----
+                        // 主车轨迹（蓝色实线），目标物轨迹（黄色实线）
+                        const drawTrail = (trail, color, width) => {
+                            if (!trail || trail.length < 2) return;
+                            ctx.strokeStyle = color; ctx.lineWidth = width;
+                            ctx.beginPath();
+                            ctx.moveTo(wx(trail[0].x), wy(trail[0].y));
+                            for (let i = 1; i < trail.length; ++i) ctx.lineTo(wx(trail[i].x), wy(trail[i].y));
+                            ctx.stroke();
+                        };
+                        drawTrail(page.stm.targetTrail, Theme.colorWarning, 2);
+                        drawTrail(page.stm.egoTrail, Theme.colorAccent, 2.5);
+
+                        // ---- 第 3 层：当前瞬时图标（最顶层）----
+                        // 主车（三角形）
                         const ex = page.w2sX(page.stm.egoX, W);
                         const ey = page.w2sY(page.stm.egoY, H);
                         ctx.fillStyle = Theme.colorAccent;
                         ctx.beginPath(); ctx.moveTo(ex, ey - 8); ctx.lineTo(ex - 6, ey + 6); ctx.lineTo(ex + 6, ey + 6); ctx.closePath(); ctx.fill();
-                        // 目标物
+                        // 目标物（方块，碰撞风险时变红）
                         const tx = page.w2sX(page.stm.tgtX, W);
                         const ty = page.w2sY(page.stm.tgtY, H);
                         ctx.fillStyle = page.stm.collisionRisk ? Theme.colorEmergency : Theme.colorWarning;
                         ctx.fillRect(tx - 7, ty - 7, 14, 14);
-                        // 连线 + 距离
+                        // 主车-目标物连线 + 距离
                         ctx.strokeStyle = Theme.colorTextMuted; ctx.lineWidth = 1;
                         ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(tx, ty); ctx.stroke();
                         ctx.fillStyle = Theme.colorText; ctx.font = "12px sans-serif";
@@ -227,7 +263,6 @@ Item {
                     anchors.top: parent.top
                     anchors.margins: Theme.spacingSm
                     spacing: Theme.spacingTiny
-
                     Rectangle {
                         color: Theme.colorPanel
                         radius: Theme.radius
@@ -249,6 +284,48 @@ Item {
                         contentItem: Text { text: btnResetView.text; color: Theme.colorTextDim; font.family: Theme.fontFamily; font.pixelSize: Theme.fontTiny; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: btnResetView.down ? Theme.colorHover : Theme.colorPanel; radius: Theme.radius; border.color: Theme.colorBorder; border.width: 1 }
                         onClicked: page.resetView()
+                    }
+                }
+
+                // 地图左下角：轨迹图例（说明各层绘制含义）
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.bottom: parent.bottom
+                    anchors.margins: Theme.spacingSm
+                    color: Theme.colorPanel
+                    radius: Theme.radius
+                    border.color: Theme.colorBorder; border.width: 1
+                    width: legendCol.implicitWidth + 16
+                    height: legendCol.implicitHeight + 12
+                    ColumnLayout {
+                        id: legendCol
+                        anchors.centerIn: parent
+                        spacing: 4
+                        // 主车轨迹
+                        RowLayout {
+                            spacing: 6
+                            Rectangle { Layout.preferredWidth: 18; Layout.preferredHeight: 3; color: Theme.colorAccent }
+                            Text { text: "主车轨迹"; color: Theme.colorTextMuted; font.family: Theme.fontFamily; font.pixelSize: Theme.fontTiny }
+                        }
+                        // 目标物轨迹
+                        RowLayout {
+                            spacing: 6
+                            Rectangle { Layout.preferredWidth: 18; Layout.preferredHeight: 3; color: Theme.colorWarning }
+                            Text { text: "目标物轨迹"; color: Theme.colorTextMuted; font.family: Theme.fontFamily; font.pixelSize: Theme.fontTiny }
+                        }
+                        // 工况预设航点
+                        RowLayout {
+                            spacing: 6
+                            Canvas {
+                                Layout.preferredWidth: 18; Layout.preferredHeight: 6
+                                onPaint: {
+                                    const c = getContext("2d"); c.reset();
+                                    c.strokeStyle = Theme.colorWarning; c.lineWidth = 1.5; c.setLineDash([3, 3]);
+                                    c.beginPath(); c.moveTo(0, 3); c.lineTo(18, 3); c.stroke();
+                                }
+                            }
+                            Text { text: "工况航点路径"; color: Theme.colorTextMuted; font.family: Theme.fontFamily; font.pixelSize: Theme.fontTiny }
+                        }
                     }
                 }
             }
