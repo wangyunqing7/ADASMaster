@@ -22,8 +22,9 @@ QtObject {
     readonly property color colorTextMuted:  "#6a6c70"   // 弱化文字（单位、占位）
 
     // ---- 字体族 ----
-    readonly property string fontFamily:  "'Microsoft YaHei','Segoe UI',system-ui,sans-serif"
-    readonly property string fontNumeric: "'Cascadia Code','Consolas','Courier New',monospace"  // 数值等宽，刷新不跳动
+    // Qt font.family 接受字体名称，不接受 CSS 字体列表。
+    readonly property string fontFamily:  "Microsoft YaHei"
+    readonly property string fontNumeric: "Consolas"  // 数值等宽，刷新不跳动
 
     // ---- 主色 / 操作 ----
     readonly property color colorAccent:     "#2d6a9f"   // 工业蓝（主操作）

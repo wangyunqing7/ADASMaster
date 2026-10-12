@@ -38,7 +38,7 @@ ApplicationWindow {
     palette.highlight: Theme.colorAccent
     palette.highlightedText: "white"
 
-    // 当前页面索引（0~4，与一级菜单顺序一致）
+    // 当前页面索引（0~5，与一级菜单顺序一致）
     property int currentPage: 0
 
     // appController 由 main.cpp setContextProperty 注入；ctrl 统一引用以便 qmllint 抑制
@@ -84,7 +84,7 @@ ApplicationWindow {
                 StackLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.preferredHeight: rightContent.height * 3 / 4
+                    Layout.preferredHeight: window.currentPage === 5 ? rightContent.height : rightContent.height * 3 / 4
                     currentIndex: window.currentPage
 
                     DevicePage { Layout.fillWidth: true; Layout.fillHeight: true }
@@ -92,10 +92,12 @@ ApplicationWindow {
                     ScenarioPage { Layout.fillWidth: true; Layout.fillHeight: true }
                     AlarmPage { Layout.fillWidth: true; Layout.fillHeight: true }
                     SettingsPage { Layout.fillWidth: true; Layout.fillHeight: true }
+                    MpcPage { Layout.fillWidth: true; Layout.fillHeight: true }
                 }
 
                 // 下：主车 / 目标车平台状态监测（占 1/4）
                 VehiclePlatformStatusMonitor {
+                    visible: window.currentPage !== 5
                     Layout.fillWidth: true
                     Layout.preferredHeight: rightContent.height / 4
                 }

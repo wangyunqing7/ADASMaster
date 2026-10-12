@@ -15,6 +15,7 @@
 #include <QQmlContext>
 #include <QIcon>
 #include "src/app/AppController.h"
+#include "tests/MpcUiSmoke.h"
 
 int main(int argc, char *argv[])
 {
@@ -23,6 +24,8 @@ int main(int argc, char *argv[])
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
     QGuiApplication app(argc, argv);
+    const int mpcSmokeIndex = app.arguments().indexOf(QStringLiteral("--mpc-ui-smoke"));
+    if (mpcSmokeIndex >= 0) qInstallMessageHandler(MpcUiSmoke::logger);
     QGuiApplication::setApplicationName(QStringLiteral("ADASMaster"));
     QGuiApplication::setOrganizationName(QStringLiteral("ADASLab"));
     QGuiApplication::setApplicationVersion(QStringLiteral("0.1.0"));
@@ -33,6 +36,8 @@ int main(int argc, char *argv[])
     controller.startup();   // 连接模拟设备、启动刷新时钟
 
     QQmlApplicationEngine engine;
+    if (mpcSmokeIndex >= 0)
+        engine.setInitialProperties({{QStringLiteral("opacity"), 0.0}});
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &controller);
 
     QObject::connect(
@@ -44,6 +49,15 @@ int main(int argc, char *argv[])
 
     // 加载编译注册的 QML 模块（URI=ADASMaster，主组件=Main）
     engine.loadFromModule("ADASMaster", "Main");
+
+    if ((app.arguments().contains(QStringLiteral("--mpc")) || mpcSmokeIndex >= 0) && !engine.rootObjects().isEmpty())
+        engine.rootObjects().first()->setProperty("currentPage", 5);
+
+    if (mpcSmokeIndex >= 0 && !engine.rootObjects().isEmpty()) {
+        const QString imagePath = app.arguments().value(mpcSmokeIndex + 1);
+        if (imagePath.isEmpty()) return 21;
+        MpcUiSmoke::run(engine.rootObjects().first(), &controller, imagePath);
+    }
 
     if (app.arguments().contains(QStringLiteral("--smoke-test")))
         return engine.rootObjects().isEmpty() ? 2 : 0;

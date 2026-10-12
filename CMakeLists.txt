@@ -14,6 +14,12 @@ set(CMAKE_AUTOMOC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Qml Sql Test Network)
 
+# 横向 MPC 可单独链接；只依赖 Qt Core，不依赖 GUI、车辆协议或第三方 QP 库。
+add_subdirectory(src/control)
+
+add_executable(lateral_mpc_demo examples/lateral_mpc/main.cpp)
+target_link_libraries(lateral_mpc_demo PRIVATE adasmaster_lateral)
+
 # Qt >= 6.10（qt_standard_project_setup 要求），项目使用现代 QML 模块系统
 qt_standard_project_setup(REQUIRES 6.10)
 
@@ -87,10 +93,11 @@ add_library(adasmaster_core STATIC
 )
 
 target_include_directories(adasmaster_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(adasmaster_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network)
+target_link_libraries(adasmaster_core PUBLIC adasmaster_lateral Qt6::Core Qt6::Sql Qt6::Network)
 
 qt_add_executable(ADASMaster
     main.cpp
+    tests/MpcUiSmoke.h
     app_icon.rc
 )
 
@@ -119,12 +126,15 @@ qt_add_qml_module(ADASMaster
         qml/components/PathPreviewMap.qml
         qml/components/WaypointEditor.qml
         qml/components/TrajectorySegmentEditor.qml
+        qml/components/MpcLineChart.qml
+        qml/components/MpcTrajectoryView.qml
         qml/pages/DevicePage.qml
         qml/pages/MapPage.qml
         qml/pages/ScenarioPage.qml
         qml/pages/AlarmPage.qml
         qml/pages/SettingsPage.qml
         qml/pages/LoginView.qml
+        qml/pages/MpcPage.qml
     RESOURCES
         config/app_config.json
         config/app_icon.ico
@@ -195,6 +205,8 @@ add_adasmaster_test(test_waypoint_simulation tests/TestWaypointSimulation.cpp)
 add_adasmaster_test(test_scenario_catalog tests/TestScenarioCatalog.cpp)
 add_adasmaster_test(test_trajectory_geometry tests/TestTrajectoryGeometry.cpp)
 add_adasmaster_test(test_ncap_evaluator tests/TestNcapEvaluator.cpp)
+add_adasmaster_test(test_lateral_mpc tests/TestLateralMpc.cpp)
+add_adasmaster_test(test_mpc_simulation tests/TestMpcSimulation.cpp)
 
 add_test(NAME qml_lint_gate
     COMMAND powershell -NoProfile -ExecutionPolicy Bypass
@@ -225,6 +237,13 @@ add_test(NAME startup_smoke
             -File ${CMAKE_CURRENT_SOURCE_DIR}/tests/CheckStartup.ps1)
 set_tests_properties(startup_smoke PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_test(NAME mpc_ui_smoke
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+            -File ${CMAKE_CURRENT_SOURCE_DIR}/tests/CheckMpcUi.ps1)
+set_tests_properties(mpc_ui_smoke PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    TIMEOUT 20)
 
 set_target_properties(ADASMaster PROPERTIES
     WIN32_EXECUTABLE TRUE    # 无控制台窗口的 GUI 程序；调试时改 FALSE 可看 qWarning

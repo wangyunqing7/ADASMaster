@@ -80,6 +80,12 @@ AppController::AppController(const QString &dataRoot,
     m_database = new DatabaseManager(this);
     m_device = new DeviceManager(this);
     m_safety = new SafetyManager(this);
+    m_steering = new lateral::SteeringRobotController(this);
+    m_mpcSimulation = new lateral::MpcSimulationModel(this);
+    connect(m_safety, &SafetyManager::safetyChanged, m_steering, [this] {
+        m_steering->setExternalEmergencyStop(m_safety->emergencyStopActive());
+        m_mpcSimulation->setSafetyEmergencyStop(m_safety->emergencyStopActive());
+    });
     m_alarm = new AlarmManager(this);
     m_auth = new AuthManager(this);
     m_state = new StateManager(this);

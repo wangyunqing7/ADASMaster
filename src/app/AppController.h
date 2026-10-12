@@ -11,6 +11,8 @@
 #include "../scenario/ScenarioEngine.h"
 #include "../scenario/ScenarioCatalog.h"
 #include "../state/StateManager.h"
+#include "../control/SteeringRobotController.h"
+#include "../control/MpcSimulationModel.h"
 
 #include <QObject>
 #include <QStringList>
@@ -31,6 +33,8 @@ class AppController : public QObject
     Q_PROPERTY(StateManager* stateManager READ stateManager CONSTANT)
     Q_PROPERTY(DataLogger* dataLogger READ dataLogger CONSTANT)
     Q_PROPERTY(ReplayListModel* replayListModel READ replayListModel CONSTANT)
+    Q_PROPERTY(lateral::SteeringRobotController* steeringController READ steeringController CONSTANT)
+    Q_PROPERTY(lateral::MpcSimulationModel* mpcSimulation READ mpcSimulation CONSTANT)
     Q_PROPERTY(bool operationalReady READ operationalReady NOTIFY readinessChanged)
     Q_PROPERTY(QString startupError READ startupError NOTIFY readinessChanged)
     Q_PROPERTY(QString currentTime READ currentTime NOTIFY clockTick)
@@ -50,6 +54,8 @@ public:
     StateManager *stateManager() const { return m_state; }
     DataLogger *dataLogger() const { return m_logger; }
     ReplayListModel *replayListModel() const { return m_replay; }
+    lateral::SteeringRobotController *steeringController() const { return m_steering; }
+    lateral::MpcSimulationModel *mpcSimulation() const { return m_mpcSimulation; }
 
     bool operationalReady() const;
     QString startupError() const { return m_startupError; }
@@ -92,6 +98,8 @@ signals:
     void scenarioTreeChanged();
 
 private:
+    lateral::SteeringRobotController *m_steering = nullptr;
+    lateral::MpcSimulationModel *m_mpcSimulation = nullptr;
     QString resolveStorageRoot(const QString &requestedRoot) const;
     void loadTrajectoryOverrides();
     bool persistTrajectoryOverrides();

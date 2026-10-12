@@ -28,7 +28,8 @@ Rectangle {
         { name: "场地地图", icon: "map" },
         { name: "工况管理", icon: "scenario" },
         { name: "报警中心", icon: "alarm" },
-        { name: "系统设置", icon: "settings" }
+        { name: "系统设置", icon: "settings" },
+        { name: "MPC 调试", icon: "test" }
     ]
 
     property int currentIndex: 0
